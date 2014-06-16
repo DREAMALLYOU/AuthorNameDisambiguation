@@ -30,7 +30,7 @@ import math
 DEBUG = False
 PRODUCTION = True
 plots = True
-
+debug_clustering = False
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -72,8 +72,8 @@ def main(name):
     mat = 1 - get_string_distance_matrix(library,catalog,'author_id','exact_match')
 
     #get mask
-    mask_matrix = get_string_distance_matrix(library,catalog,'author_name','syllab_jaccard')
-        
+    #mask_matrix = get_string_distance_matrix(library,catalog,'author_name','syllab_jaccard')
+    mask_matrix = np.ones((len(catalog),len(catalog)))    
     #plots
     """
     fig = plt.figure()
@@ -85,7 +85,7 @@ def main(name):
     fig.colorbar(im)
     return
     """
-    """
+    
     mat_title = 1 - get_cosine_distance_matrix(library,catalog,'title','cosine',mask_matrix)
     mat_coauthors = 1- get_cosine_distance_matrix(library,catalog,'coauthors','cosine',mask_matrix)
     mat_institutions = 1-get_cosine_distance_matrix(library,catalog,'institutions','cosine',mask_matrix)
@@ -95,8 +95,36 @@ def main(name):
     mat_keywords = 1-get_cosine_distance_matrix(library,catalog,'keywords','cosine',mask_matrix)
     mat_ref_authors = 1-get_cosine_distance_matrix(library,catalog,'ref_authors','cosine',mask_matrix)
     mat_ref_journals = 1-get_cosine_distance_matrix(library,catalog,'ref_journals','cosine',mask_matrix)
-    """
-    """
+    
+    counter = 0
+    #get graph matrices aggregated by max (counter increases only of 1) 
+    graph_mat = None
+    for (k,v) in graphs.items():
+        #mat_temp = get_graph(library, catalog, focus_name, k)
+        #mat_list.append(mat_temp)
+        #counter = counter + 1
+        if v:
+            if graph_mat is None:
+                graph_mat = np.zeros((len(library), len(library)))
+            mat_temp = get_graph(library, catalog, focus_name, k)
+            graph_mat = np.maximum(mat_temp, graph_mat)
+    counter = 0
+    
+    subject_graph = 1 - get_graph(library, catalog, focus_name, "subjects")
+    
+    mat_list = []
+    
+    if graph_mat is not None:
+        counter = counter + 1
+        #get final matrix, apply also mask to graph matrix
+        mat_list.append(graph_mat * mask_matrix)
+        """
+        plt.figure()
+        plt.imshow(graph_mat, cmap=cm.coolwarm, interpolation='none', vmin=0, vmax=1)
+        plt.title("Graphs")
+        plt.colorbar()"""
+    mat_graph = 1 - graph_mat
+    
     fig = plt.figure()
     #("Cosine similarity matrices", fontdict={'fontsize': 18})
     ax = fig.add_subplot(251)
@@ -125,8 +153,8 @@ def main(name):
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     ax = fig.add_subplot(256)
-    ax.set_title("Year") 
-    ax.imshow(mat_year, cmap=cm.GnBu, interpolation='none', vmin=0, vmax=1)
+    ax.set_title("Graph Mat") 
+    ax.imshow(mat_graph, cmap=cm.GnBu, interpolation='none', vmin=0, vmax=1)
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     ax = fig.add_subplot(257)
@@ -149,6 +177,7 @@ def main(name):
     ax.imshow(mat_ref_journals, cmap=cm.GnBu, interpolation='none', vmin=0, vmax=1)
     ax.set_xticklabels([])
     ax.set_yticklabels([])
+    """
     return
     """
     
@@ -170,9 +199,9 @@ def main(name):
     """
     
     #get distance matrices aggregated by sum (counter increases each time) 
-    counter = 0
+    
     mat_temp = []
-    mat_list = []
+    
     for (k,v) in all.items():
         if v:
             mat_temp = get_cosine_distance_matrix(library,catalog,k,'cosine',mask_matrix)
@@ -182,26 +211,6 @@ def main(name):
             plt.colorbar()"""
             mat_list.append(mat_temp)
             counter = counter + 1
-    
-    #get graph matrices aggregated by max (counter increases only of 1) 
-    graph_mat = None
-    for (k,v) in graphs.items():
-        #mat_temp = get_graph(library, catalog, focus_name, k)
-        #mat_list.append(mat_temp)
-        #counter = counter + 1
-        if v:
-            if graph_mat is None:
-                graph_mat = np.zeros((len(library), len(library)))
-            mat_temp = get_graph(library, catalog, focus_name, k)
-            graph_mat = np.maximum(mat_temp, graph_mat)
-    if graph_mat is not None:
-        counter = counter + 1
-        #get final matrix, apply also mask to graph matrix
-        mat_list.append(graph_mat * mask_matrix)
-        """plt.figure()
-        plt.imshow(graph_mat, cmap=cm.coolwarm, interpolation='none', vmin=0, vmax=1)
-        plt.title("Graphs")
-        plt.colorbar()"""
     
     #IMPORTANT BEFORE CLUSTERING
     #normalize final matrix and convert to DISTANCE matrix
@@ -410,7 +419,7 @@ def main(name):
                 print(" - {0}".format(library[catalog[uid]].printout))
             print("\n")
 
-    if plots:
+    if plots and debug_clustering:
         #normalization for plotting
         coauthor_entropy_history_norm = normalize(coauthor_entropy_history)
         subject_entropy_history_norm = normalize(subject_entropy_history)
@@ -434,45 +443,46 @@ def main(name):
             country_entropy_history_norm,
             journal_entropy_history_norm
             ))
-        plt.figure("Optimal cut representation")
-        plt.title('Hierarchical agglomerative clustering thresholds and entropies', fontdict={'fontsize': 18})
-        plt.ylabel('Normalized information entropy', fontdict={'fontsize': 14})
-        plt.xlabel('HAC cutting threshold', fontdict={'fontsize': 14})
-        plt.axis([.5, 1 , 0, max_y])
-        plt.plot(relevant_thresholds, year_entropy_history_norm, 'r', label="Year")
-        plt.plot(relevant_thresholds, subject_entropy_history_norm, 'b', label="Subjects")
-        plt.plot(relevant_thresholds, coauthor_entropy_history_norm, 'g', label="Coauthors")
-        plt.plot(relevant_thresholds, country_entropy_history_norm, 'm', label="Countries")
-        plt.plot(relevant_thresholds, journal_entropy_history_norm, 'y', label="Journals")
-        plt.legend(loc=2)
-        plt.vlines(truth_cut, min_y, max_y)
-        plt.legend(loc=2)
-        thismanager = plt.get_current_fig_manager()
-        thismanager.window.setGeometry(15,600,800, 400)
-        plt.figure()
-        plt.title('Hierarchical agglomerative clustering thresholds and similarities', fontdict={'fontsize': 18})
-        plt.plot(relevant_thresholds, within_history, color='r', linewidth=1, label="Intra clusters")
-        plt.plot(relevant_thresholds, between_history, color='g', linewidth=1, label="Inter clusters")
-        plt.plot(relevant_thresholds, concensus_history, color='b', linewidth=1, label="Consensus")
-        plt.plot(my_cut, concensus_history[list(relevant_thresholds).index(my_cut)], 'k', marker='o', markersize=10)
-        min_y = min(min(concensus_history,within_history,between_history))
-        max_y = max(max(concensus_history,within_history,between_history))
-        plt.legend(loc=2)
-        plt.ylabel('Similarity', fontdict={'fontsize': 14})
-        plt.xlabel('HAC cutting threshold', fontdict={'fontsize': 14})
-        plt.vlines(truth_cut, min_y, max_y)
-        plt.axis([0.5, 1 , min_y, max_y])
+        if debug_clustering:
+            plt.figure("Optimal cut representation")
+            plt.title('Hierarchical agglomerative clustering thresholds and entropies', fontdict={'fontsize': 18})
+            plt.ylabel('Normalized information entropy', fontdict={'fontsize': 14})
+            plt.xlabel('HAC cutting threshold', fontdict={'fontsize': 14})
+            plt.axis([.5, 1 , 0, max_y])
+            plt.plot(relevant_thresholds, year_entropy_history_norm, 'r', label="Year")
+            plt.plot(relevant_thresholds, subject_entropy_history_norm, 'b', label="Subjects")
+            plt.plot(relevant_thresholds, coauthor_entropy_history_norm, 'g', label="Coauthors")
+            plt.plot(relevant_thresholds, country_entropy_history_norm, 'm', label="Countries")
+            plt.plot(relevant_thresholds, journal_entropy_history_norm, 'y', label="Journals")
+            plt.legend(loc=2)
+            plt.vlines(truth_cut, min_y, max_y)
+            plt.legend(loc=2)
+            thismanager = plt.get_current_fig_manager()
+            thismanager.window.setGeometry(15,600,800, 400)
+            plt.figure()
+            plt.title('Hierarchical agglomerative clustering thresholds and similarities', fontdict={'fontsize': 18})
+            plt.plot(relevant_thresholds, within_history, color='r', linewidth=1, label="Intra clusters")
+            plt.plot(relevant_thresholds, between_history, color='g', linewidth=1, label="Inter clusters")
+            plt.plot(relevant_thresholds, concensus_history, color='b', linewidth=1, label="Consensus")
+            plt.plot(my_cut, concensus_history[list(relevant_thresholds).index(my_cut)], 'k', marker='o', markersize=10)
+            min_y = min(min(concensus_history,within_history,between_history))
+            max_y = max(max(concensus_history,within_history,between_history))
+            plt.legend(loc=2)
+            plt.ylabel('Similarity', fontdict={'fontsize': 14})
+            plt.xlabel('HAC cutting threshold', fontdict={'fontsize': 14})
+            plt.vlines(truth_cut, min_y, max_y)
+            plt.axis([0.5, 1 , min_y, max_y])
         
-        #plot clustering according to the best cut
-        fig, ax = plt.subplots() 
-        fig.canvas.set_window_title('Hierarchical clustering')
-        fig.subplots_adjust(left=0.05, right=0.95, bottom=0.15, top=0.95)
-        ax.set_title("Hierarchical Agglomerative Clustering for {0}".format(focus_name.split()[0]), fontdict={'fontsize': 18})
-        hac.dendrogram(linkage_matrix, color_threshold=my_cut, orientation='top', leaf_font_size=12, 
-            leaf_label_func=lambda id: library[id].author_name + " - " + str(library[id].author_id))
-        plt.ylabel("Threshold", fontdict={'fontsize': 14})
-        thismanager = plt.get_current_fig_manager()
-        thismanager.window.setGeometry(850,45,800, 500)
+            #plot clustering according to the best cut
+            fig, ax = plt.subplots() 
+            fig.canvas.set_window_title('Hierarchical clustering')
+            fig.subplots_adjust(left=0.05, right=0.95, bottom=0.15, top=0.95)
+            ax.set_title("Hierarchical Agglomerative Clustering for {0}".format(focus_name.split()[0]), fontdict={'fontsize': 18})
+            hac.dendrogram(linkage_matrix, color_threshold=my_cut, orientation='top', leaf_font_size=12, 
+                leaf_label_func=lambda id: library[id].author_name + " - " + str(library[id].author_id))
+            plt.ylabel("Threshold", fontdict={'fontsize': 14})
+            thismanager = plt.get_current_fig_manager()
+            thismanager.window.setGeometry(850,45,800, 500)
 
 
 def normalize(values):
@@ -481,7 +491,7 @@ def normalize(values):
     
 if __name__ == "__main__":
     
-    focus_names = ["Abe %"]
+    focus_names = ["Lefebvre A%"]
     
     """focus_names = []
         "Lefebvre A%", "Ades %", "Zighed %", "Liu W%", "Bassand %", "Boussaid %", "Meyer R%", "Morel M%", "Abe %", \
