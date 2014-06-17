@@ -149,5 +149,5 @@ def within_clust_sim(similarity_matrix, catalog, clusters):
         
 def concensus(similarity_matrix, catalog,clusters):
     k1= 1
-    k2 = -.5
+    k2 = -.3
     return k1*within_clust_sim(similarity_matrix, catalog,clusters) + k2*between_clust_sim(similarity_matrix, catalog,clusters)
