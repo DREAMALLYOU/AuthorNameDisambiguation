@@ -28,7 +28,7 @@ from sklearn.externals import joblib
 import math
 
 DEBUG = False
-PRODUCTION = True
+PRODUCTION = False
 plots = True
 
 import warnings
@@ -289,7 +289,7 @@ def main(name):
     #print("Linkage matrix:\n", linkage_matrix)
     relevant_thresholds =  np.concatenate(([0],np.array(linkage_matrix[:,2]), [1]), axis=0)
     
-    year_entropy_history = []
+    overall_entropy_history = []
     coauthor_entropy_history = []
     country_entropy_history = []
     subject_entropy_history = []
@@ -301,8 +301,11 @@ def main(name):
     
     truth_fmeasure = 0
     truth_cut = 0
+    
+    previous_clusters = {}
+    
     for x in relevant_thresholds:
-        x+=0.00001
+        x+=0.0000000000001
         clusters_list = hac.fcluster(linkage_matrix, x, criterion='distance') #'maxclust'
         
         #mapping structure and evaluation structure
@@ -314,11 +317,23 @@ def main(name):
                 clusters[v] = []
             #like assigning Id to clusters... library[k].unique_identifier would be better
             clusters[v].append(library[k].unique_identifier)
+            
+        new_cluster =  1
+        
+        # identifying which cluster was formed
+        if len(previous_clusters)> 0:
+            for (o_cluster,o_papers) in previous_clusters.items():
+                for (n_cluster,n_papers) in clusters.items():
+                    if o_papers[0] in n_papers[0] and len(o_papers)<len(n_papers):
+                        new_cluster = n_cluster
+        
+        previous_clusters = clusters
         
         #num of clusters for current threshold
         num_clusters = len(clusters)
         
         #evaluation
+
         concensus_history.append(concensus(1 -final_matrix, catalog, clusters))
         within_history.append(within_clust_sim(1-final_matrix, catalog, clusters))
         between_history.append(between_clust_sim(1-final_matrix, catalog, clusters))
@@ -329,7 +344,7 @@ def main(name):
             truth_cut = x
             truth_precision = precision
             truth_recall = recall
-        
+        """
         # entropies with respect to features, for each cluster:
         # - first split the feature of interest (e.g. coauthors) and put them in the "entropy_feature" list, keep repetitions 
         # - then count the ocurrences of each class (e.g. each coauthor)
@@ -376,15 +391,49 @@ def main(name):
                 for journal in library[catalog[uid]].journals.split(" "):
                     if journal.strip(): journals_in_clusters.append(journal)
             entropy_journals[clust] = get_clusters_shannon_entropy(journals_in_clusters)
+        """
+        
+        #entropy coauthors for the current cluster
+        coauthors_in_cluster = []
+        for uid in clusters[new_cluster]:
+            for coauthor in library[catalog[uid]].coauthors.split(" "):
+                if coauthor.strip(): coauthors_in_cluster.append(coauthor)
+        entropy_coauthors = get_clusters_shannon_entropy(coauthors_in_cluster)
+        
+        #entropy test on subjects
+        subjects_in_cluster = []
+        for uid in clusters[new_cluster]:
+            for subject in library[catalog[uid]].subjects.split(" "):
+                if subject.strip(): subjects_in_cluster.append(subject)
+        entropy_subjects = get_clusters_shannon_entropy(subjects_in_cluster)
+        
+        #entropy test on countries
+        countries_in_cluster = []
+        for uid in clusters[new_cluster]:
+            for country in library[catalog[uid]].countries.split(" "):
+                if country.strip(): countries_in_cluster.append(country)
+        entropy_countries = get_clusters_shannon_entropy(countries_in_cluster)
+        
 
-        #statistics for the current cluster
-        #sum up the entropies or average them
-        year_entropy_history.append(sum(entropy_years.values())/num_clusters)
-        coauthor_entropy_history.append(sum(entropy_coauthors.values())/num_clusters)
-        country_entropy_history.append(sum(entropy_countries.values())/num_clusters)
-        subject_entropy_history.append(sum(entropy_subjects.values())/num_clusters)
-        journal_entropy_history.append(sum(entropy_journals.values())/num_clusters)
+        #entropy on journal
+        journals_in_cluster = []
+        for uid in clusters[new_cluster]:
+            for journal in library[catalog[uid]].journals.split(" "):
+                if journal.strip(): journals_in_cluster.append(journal)
+        entropy_journals = get_clusters_shannon_entropy(journals_in_cluster)
+
+        #overal entropy 
+        all_terms = journals_in_cluster+ countries_in_cluster +subjects_in_cluster +coauthors_in_cluster
+        
+        entropy_overall = get_clusters_shannon_entropy(all_terms)
+        
+        coauthor_entropy_history.append(entropy_coauthors)
+        country_entropy_history.append(entropy_countries)
+        subject_entropy_history.append(entropy_subjects)
+        journal_entropy_history.append(entropy_journals)
     
+        overall_entropy_history.append(entropy_overall)
+        
     #best cut
     my_cut_index = concensus_history.index(max(concensus_history))
     my_cut = relevant_thresholds[my_cut_index]
@@ -415,35 +464,38 @@ def main(name):
         coauthor_entropy_history_norm = normalize(coauthor_entropy_history)
         subject_entropy_history_norm = normalize(subject_entropy_history)
         country_entropy_history_norm = normalize(country_entropy_history)
-        year_entropy_history_norm = normalize(year_entropy_history)
         journal_entropy_history_norm = normalize(journal_entropy_history)
-    
+        overall_entropy_history_norm = normalize(overall_entropy_history)
         
         #plot the overall results
         max_y = max(max(
-            year_entropy_history_norm,
             subject_entropy_history_norm,
             coauthor_entropy_history_norm,
             country_entropy_history_norm,
-            journal_entropy_history_norm
+            journal_entropy_history_norm,
+            overall_entropy_history_norm
             ))
         min_y = min(min(
-            year_entropy_history_norm,
             subject_entropy_history_norm,
             coauthor_entropy_history_norm,
             country_entropy_history_norm,
-            journal_entropy_history_norm
+            journal_entropy_history_norm,
+            overall_entropy_history_norm
             ))
         plt.figure("Optimal cut representation")
         plt.title('Hierarchical agglomerative clustering thresholds and entropies', fontdict={'fontsize': 18})
         plt.ylabel('Normalized information entropy', fontdict={'fontsize': 14})
         plt.xlabel('HAC cutting threshold', fontdict={'fontsize': 14})
-        plt.axis([.5, 1 , 0, max_y])
-        plt.plot(relevant_thresholds, year_entropy_history_norm, 'r', label="Year")
+        #
+        plt.axis([0, 1 , 0, max_y])
+        #plt.axis([0, len(within_history)+1 , 0, max_y])
+        clusters = [x for x in range(len(within_history)+1,1,-1)]
+        clusters = [x for x in range(1,len(within_history)+1)]
         plt.plot(relevant_thresholds, subject_entropy_history_norm, 'b', label="Subjects")
+        plt.plot(relevant_thresholds, overall_entropy_history_norm, 'r', label="Overall")
         plt.plot(relevant_thresholds, coauthor_entropy_history_norm, 'g', label="Coauthors")
-        plt.plot(relevant_thresholds, country_entropy_history_norm, 'm', label="Countries")
-        plt.plot(relevant_thresholds, journal_entropy_history_norm, 'y', label="Journals")
+#        plt.plot(relevant_thresholds, country_entropy_history_norm, 'm', label="Countries")
+#        plt.plot(relevant_thresholds, journal_entropy_history_norm, 'y', label="Journals")
         plt.legend(loc=2)
         plt.vlines(truth_cut, min_y, max_y)
         plt.legend(loc=2)
@@ -451,17 +503,18 @@ def main(name):
         thismanager.window.setGeometry(15,600,800, 400)
         plt.figure()
         plt.title('Hierarchical agglomerative clustering thresholds and similarities', fontdict={'fontsize': 18})
+
         plt.plot(relevant_thresholds, within_history, color='r', linewidth=1, label="Intra clusters")
         plt.plot(relevant_thresholds, between_history, color='g', linewidth=1, label="Inter clusters")
         plt.plot(relevant_thresholds, concensus_history, color='b', linewidth=1, label="Consensus")
         plt.plot(my_cut, concensus_history[list(relevant_thresholds).index(my_cut)], 'k', marker='o', markersize=10)
         min_y = min(min(concensus_history,within_history,between_history))
-        max_y = max(max(concensus_history,within_history,between_history))
+        max_y = max(max(concensus_history),max(within_history),max(between_history))
         plt.legend(loc=2)
         plt.ylabel('Similarity', fontdict={'fontsize': 14})
         plt.xlabel('HAC cutting threshold', fontdict={'fontsize': 14})
         plt.vlines(truth_cut, min_y, max_y)
-        plt.axis([0.5, 1 , min_y, max_y])
+        plt.axis([0, 1 , min_y, max_y])
         
         #plot clustering according to the best cut
         fig, ax = plt.subplots() 
@@ -481,7 +534,7 @@ def normalize(values):
     
 if __name__ == "__main__":
     
-    focus_names = ["Abe %"]
+    focus_names = ["Rico %"]
     
     """focus_names = []
         "Lefebvre A%", "Ades %", "Zighed %", "Liu W%", "Bassand %", "Boussaid %", "Meyer R%", "Morel M%", "Abe %", \

@@ -138,16 +138,18 @@ def between_clust_sim(similarity_matrix,catalog, clusters):
 def within_clust_sim(similarity_matrix, catalog, clusters):
     cluster_acc = 0
     for clust, author_uids in clusters.items():
+        #print (author_uids)
         paper_acc = 0
         for p1 in author_uids:
             for p2 in author_uids:
                 if p1!=p2:
                     paper_acc = paper_acc + similarity_matrix[catalog[p1]][catalog[p2]]
-        cluster_acc = cluster_acc + paper_acc / len(author_uids)**2 # maybe cluster_acc = cluster_acc + paper_acc / len(catalog)**2
+        cluster_acc = cluster_acc + paper_acc / (len(author_uids)**2) # maybe cluster_acc = cluster_acc + paper_acc / len(catalog)**2
+
     return cluster_acc
         
         
 def concensus(similarity_matrix, catalog,clusters):
     k1= 1
-    k2 = -.3
+    k2 = -.30
     return k1*within_clust_sim(similarity_matrix, catalog,clusters) + k2*between_clust_sim(similarity_matrix, catalog,clusters)

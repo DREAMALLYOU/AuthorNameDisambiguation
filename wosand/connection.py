@@ -2,11 +2,11 @@ import mysql.connector
 from mysql.connector import errorcode
 
 DB_CONFIG = {
-    'host': '',
+    'host': 'griva.ish-lyon.cnrs.fr',
     'port': '3306',
-    'user': '',
-    'password': '',
-    'database': '',
+    'user': 'publications',
+    'password': 'dmkm2014',
+    'database': 'DMKM_publications',
     'raise_on_warnings': True,
 }
 
