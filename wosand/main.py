@@ -77,10 +77,10 @@ def main(name,subset = False):
     mat = 1 - get_string_distance_matrix(library,catalog,'author_id','exact_match')
 
     #get mask
-    mask_matrix = get_string_distance_matrix(library,catalog,'author_name','syllab_jaccard')
+    mask_matrix = get_string_distance_matrix(library,catalog,'author_name','initials_jaccard')
     mask = np.array(mask_matrix)
-    mask[mask>0] = 1
-
+    mask[mask<1] = 0
+    mask = 1 -mask
     #plots
     '''
     fig = plt.figure()
@@ -92,47 +92,58 @@ def main(name,subset = False):
     fig.colorbar(im)'''
     #return
     
-
+    '''
     mat_title = 1 - get_cosine_distance_matrix(library,catalog,'title','cosine')
     mat_coauthors = 1- get_cosine_distance_matrix(library,catalog,'coauthors','cosine')
     mat_institutions = 1-get_cosine_distance_matrix(library,catalog,'institutions','cosine')
     mat_journals = 1-get_cosine_distance_matrix(library,catalog,'journals','cosine')
     mat_year = 1-get_cosine_distance_matrix(library,catalog,'year','cosine')
     mat_subjects = 1-get_cosine_distance_matrix(library,catalog,'subjects','cosine')
-    mat_keywords = 1-get_cosine_distance_matrix(library,catalog,'keywords','cosine')
+    mat_keywords = 1-get_cosine_distance_matrix(library,catalog,'keywords','cosine')http://open.spotify.com/track/58KaBE2fnHA8R0iesCbe8o
     mat_ref_authors = 1-get_cosine_distance_matrix(library,catalog,'ref_authors','cosine')
     mat_ref_journals = 1-get_cosine_distance_matrix(library,catalog,'ref_journals','cosine')
-    mat_coauthorship = 1 - (get_graph(library, catalog, focus_name, 'coauthorship')*mask_matrix)
+    '''
+    
+    
+    mat_references = 1 - (get_graph(library, catalog, focus_name, 'references'))
+    mat_keywords = 1 - (get_graph(library, catalog, focus_name, 'keywords'))
+    mat_subjects = 1 - (get_graph(library, catalog, focus_name, 'subjects'))    
+    mat_coauthorship = 1 - (get_graph(library, catalog, focus_name, 'coauthorship'))
     fig = plt.figure()
     #("Cosine similarity matrices", fontdict={'fontsize': 18})
     ax = fig.add_subplot(251)
-    plt.title("Title")
-    ax.imshow(mat_title, cmap=cm.GnBu, interpolation='none', vmin=0, vmax=1)
+    plt.title("References")
+    ax.imshow(mat_references, cmap=cm.GnBu, interpolation='none', vmin=0, vmax=1)
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     ax = fig.add_subplot(252)
-    ax.set_title("(Institutions")
-    ax.imshow(mat_institutions, cmap=cm.GnBu, interpolation='none', vmin=0, vmax=1)
+    ax.set_title("(Keywords")
+    ax.imshow(mat_keywords, cmap=cm.GnBu, interpolation='none', vmin=0, vmax=1)
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     ax = fig.add_subplot(253)
-    ax.set_title("Ref_journals")
-    ax.imshow(mat_ref_journals, cmap=cm.GnBu, interpolation='none', vmin=0, vmax=1)
+    ax.set_title("Subjects")
+    ax.imshow(mat_subjects, cmap=cm.GnBu, interpolation='none', vmin=0, vmax=1)
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     ax = fig.add_subplot(254)
-    ax.set_title("Ref_author")
-    ax.imshow(mat_coauthors, cmap=cm.GnBu, interpolation='none', vmin=0, vmax=1)
+    ax.set_title("Coauthorship")
+    ax.imshow(mat_coauthorship, cmap=cm.GnBu, interpolation='none', vmin=0, vmax=1)
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     ax = fig.add_subplot(255)
-    ax.set_title("Keyword")
-    ax.imshow(mat_keywords, cmap=cm.GnBu, interpolation='none', vmin=0, vmax=1)
+    ax.set_title("Optimal")
+    ax.imshow(mat, cmap=cm.GnBu, interpolation='none', vmin=0, vmax=1)
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     ax = fig.add_subplot(256)
     
-
+    mat_references = 1 - (get_graph(library, catalog, focus_name, 'references')*mask)
+    mat_keywords = 1 - (get_graph(library, catalog, focus_name, 'keywords')*mask)
+    mat_subjects = 1 - (get_graph(library, catalog, focus_name, 'subjects')*mask)    
+    mat_coauthorship = 1 - (get_graph(library, catalog, focus_name, 'coauthorship')*mask)
+    
+    '''
     mat_title = 1 - get_cosine_distance_matrix(library,catalog,'title','cosine') * mask
     mat_coauthors = 1- get_cosine_distance_matrix(library,catalog,'coauthors','cosine') * mask
     mat_institutions = 1-get_cosine_distance_matrix(library,catalog,'institutions','cosine') * mask
@@ -143,34 +154,37 @@ def main(name,subset = False):
     mat_ref_authors = 1-get_cosine_distance_matrix(library,catalog,'ref_authors','cosine') * mask
     mat_ref_journals = 1-get_cosine_distance_matrix(library,catalog,'ref_journals','cosine') * mask
     mat_coauthorship = 1 - (get_graph(library, catalog, focus_name, 'coauthorship')*mask_matrix) * mask
+    '''
     
-    ax.set_title("Title (2)") 
-    ax.imshow(adjust_sigmoid(mat_title), cmap=cm.GnBu, interpolation='none', vmin=0, vmax=1)
+    
+    ax.set_title("References (2)") 
+    ax.imshow(adjust_sigmoid(mat_references), cmap=cm.GnBu, interpolation='none', vmin=0, vmax=1)
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     ax = fig.add_subplot(257)
-    ax.set_title("Institution (2)")
-    ax.imshow(adjust_sigmoid(mat_institutions), cmap=cm.GnBu, interpolation='none', vmin=0, vmax=1)
+    ax.set_title("Keywords (2) (2)")
+    ax.imshow(adjust_sigmoid(mat_keywords), cmap=cm.GnBu, interpolation='none', vmin=0, vmax=1)
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     ax = fig.add_subplot(258)
-    ax.set_title("Ref_journals (2)")
-    ax.imshow(adjust_sigmoid(mat_ref_journals), cmap=cm.GnBu, interpolation='none', vmin=0, vmax=1)
+    ax.set_title("Subjects (2)")
+    ax.imshow(adjust_sigmoid(mat_subjects), cmap=cm.GnBu, interpolation='none', vmin=0, vmax=1)
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     ax = fig.add_subplot(259)
     ax.set_title("Coauthors (2)")
-    ax.imshow(adjust_sigmoid(mat_coauthors), cmap=cm.GnBu, interpolation='none', vmin=0, vmax=1)
+    ax.imshow(adjust_sigmoid(mat_coauthorship), cmap=cm.GnBu, interpolation='none', vmin=0, vmax=1)
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     ax = fig.add_subplot(250)
-    ax.set_title("Keywords (2)")
-    ax.imshow(adjust_sigmoid(mat_keywords), cmap=cm.GnBu, interpolation='none', vmin=0, vmax=1)
+    ax.set_title("Mask")
+    ax.imshow(mask, cmap=cm.GnBu, interpolation='none', vmin=0, vmax=1)
     ax.set_xticklabels([])
     ax.set_yticklabels([])
-
+    return
     mat_coauthorship = 1 - (get_graph(library, catalog, focus_name, 'coauthorship')*mask_matrix)
     mat_references = 1 - (get_graph(library, catalog, focus_name, 'references') * mask_matrix)
+
     '''
     fig = plt.figure()
     ax = fig.add_subplot(121)
@@ -315,13 +329,13 @@ def main(name,subset = False):
     '''
     fig = plt.figure()
     ax = fig.add_subplot(121)
-    ax.set_title("Final")
-    ax.imshow(final_matrix, cmap=cm.GnBu, interpolation='none', vmin=0, vmax=1)
+    ax.set_title("Ideal")
+    ax.imshow(mat, cmap=cm.GnBu, interpolation='none', vmin=0, vmax=1)
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     ax = fig.add_subplot(122)
-    ax.set_title("Contrast")
-    ax.imshow(mat, cmap=cm.GnBu, interpolation='none', vmin=0, vmax=1)
+    ax.set_title("Final")
+    ax.imshow(final_matrix, cmap=cm.GnBu, interpolation='none', vmin=0, vmax=1)
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     #return
@@ -752,11 +766,11 @@ if __name__ == "__main__":
     
     # focus_names = ['Zighed %', 'Muller J%', 'Meyer %', 'Morel %', 'Karakiewicz %']
     #focus_names = ['Beer %']
-    #focus_names = ['Karakiewicz %', 'Nikolic %', 'Stokes %', 'Rohrmann %', 'Casteilla %', 'Rico %', 'Pita %','Beer %', 'Cartier %', 'Bruce %', 'Kraft %', 'Eklund %', 'Zighed %','Bassetti %', DE AQUI EN ADELANTE SON NUEVOS 'Jouet %', 'Arlot %', 'Pujolle %','Barba %', 'Gaillot %']
+    focus_names = ['Karakiewicz %', 'Nikolic %', 'Stokes %', 'Rohrmann %', 'Casteilla %', 'Rico %', 'Pita %','Beer %', 'Cartier %', 'Bruce %', 'Kraft %', 'Eklund %', 'Zighed %','Bassetti %', 'Jouet %', 'Arlot %', 'Pujolle %','Barba %', 'Gaillot %']
     #focus_names = ['Beer %', 'Cartier %', 'Bruce %', 'Kraft %']
-    focus_names = ['Abe %'] #['Barba %', 'Gaillot %', ]
+    focus_names = ['Abe %'] #,'Abe %']  <------ TRAINING SET
     # Nikolic, Stokes, Rohrmann, Casteilla, Rico, Pita
-    
+    #focus_names = ['Zighed %']
     """focus_names = []
         "Lefebvre A%", "Ades %", "Zighed %", "Liu W%", "Bassand %", "Boussaid %", "Meyer R%", "Morel M%", "Abe %", \
         "Karakiewicz %", "Nikolic %", "Allemand J%", "Arlot %", "Barba %", "Bassetti %", "Blaise %", "Casteilla %", "Eklund %", "Chiron %", "Gaillot %",\

@@ -73,7 +73,7 @@ def get_library(focus_name, debug,subset):
             
             #feature cleaning     
             author_id = str(el[0]) #the disambiguated one for test purposes
-            author_name = preprocessing(el[1], stemming=False, stop_words=PREFIXES, min_word_length=0)
+            author_name = preprocessing(el[1], stemming=False, stop_words=[], min_word_length=0) # NOTE THAT NO PREFIXES ARE REMOVED. THIS COULD BE A PRODUCTION PROBLEM. BUT PREFIX REMOVAL IS AFFECTING AUTHORS LIKE ZIGHED, DA. A MORE ELLABORATE PROCEDURE IS NEEDED SO THAT PREFIXES ARE ONLY REMOVED IF THEY ARE AT THE BEGGINING.
             paper_id = el[2]
             paper_title = preprocessing(el[3], stemming=True, stop_words=STOP_WORDS, min_word_length=2)
             year = preprocessing(el[4], stemming=True, stop_words=STOP_WORDS, min_word_length=2)
@@ -136,6 +136,8 @@ def get_string_distance_matrix(library, catalog, field, distance_type):
         f = lambda x,y: get_exact_match_dist(getattr(x, field), getattr(y, field))
     elif distance_type is "at_least_one":
         f = lambda x,y: get_at_least_one_dist(getattr(x, field), getattr(y, field))    
+    elif distance_type is "initials_jaccard":
+        f = lambda x,y: get_initials_jaccard_dist(getattr(x, field), getattr(y, field))    
         
     #loop paper1
     for i in range(len(library)-1):         
@@ -149,7 +151,9 @@ def get_string_distance_matrix(library, catalog, field, distance_type):
             else:
                 mat_result[catalog[p1.unique_identifier], catalog[p2.unique_identifier]] = dist_string
                 mat_result[catalog[p2.unique_identifier], catalog[p1.unique_identifier]] = dist_string
-    
+    if distance_type == 'initials_jaccard':
+        for i in range(len(library)):  
+            mat_result[catalog[library[i].unique_identifier],catalog[library[i].unique_identifier]]=1
     #max distance for normalization
     max_dist = np.max(mat_result) if mat_result != [] else 0
     #normalize [0,1]

@@ -48,6 +48,30 @@ def get_syllabes_jaccard_dist(str1, str2):
     distance_strings = nltk.distance.jaccard_distance(set1, set2)
     return distance_strings, False
     
+def get_initials_jaccard_dist(str1, str2):
+    if not str1 or not str2:
+        return DEFAULT_VALUE, True
+    tmp1 = str1.split()#set()
+    tmp2 = str2.split()#set()
+    #print(tmp1)
+    #print(tmp2)
+    tmp1.remove(tmp1[0])
+    tmp2.remove(tmp2[0])
+    set1 = ''.join(tmp1)
+    set2 = ''.join(tmp2)
+    if not set1 or not set2:
+        return DEFAULT_VALUE, True
+    initials1 = set([letter for letter in set1])
+    initials2 = set([letter for letter in set2])
+    #print(initials1)
+    #print(initials2)
+    ##print(len(initials1.intersection(initials2))/len(initials1.union(initials2)))
+    distance_strings = len(initials1.intersection(initials2))/len(initials1.union(initials2))
+    
+    return distance_strings, False
+
+def get_subject_dist(subject1,subject2):
+    pass    
 
 def get_exact_match_dist(str1, str2):
     if not str1 or not str2:
