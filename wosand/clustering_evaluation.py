@@ -3,7 +3,6 @@ import copy
 
 import numpy as np
 
-
 def get_clusters_shannon_entropy(elements_in_clusters):
     counter = {}
     num_elements = 0
@@ -50,7 +49,36 @@ def evaluate(foundClusters, groundTruth):
     
     return precision, recall, f_measure
 
-
+def paperElbow(x,y):
+    values = []
+    for i in range(1,len(x)):
+        
+        # Left line fit.
+        left_x = x[0:i]
+        left_y = y[0:i]
+        
+        z = np.polyfit(left_x, left_y, 1)
+        p = np.poly1d(z)
+        
+        pairs = zip(left_x, left_y)
+        left_error = (sum([(b-p(a))**2 for (a,b) in pairs]))*.5
+        
+        # Right line fit.
+        right_x = x[i:len(x)]
+        right_y = y[i:len(x)]
+        
+        z = np.polyfit(right_x, right_y, 1)
+        p = np.poly1d(z)
+        
+        pairs = zip(right_x, right_y)
+        right_error = (sum([(b-p(a))**2 for (a,b) in pairs]))*.5
+        
+        # Calculate the error for this point
+        
+        values.append(left_error*((len(left_x)-1)/(len(x)-1)) + right_error*((len(x)-len(left_x))/(len(x)-1)))
+        
+    return(values.index(min(values)))
+    
 def elbow(points):
     windowSize = 1
     differences = []
@@ -69,7 +97,7 @@ def elbow(points):
         secondDerivative.append(np.mean(differences[i:i+windowSize])-np.mean(before))
     #print(secondDerivative)
     #print(points[secondDerivative.index(max(secondDerivative)) + windowSize])
-    return secondDerivative.index(max(secondDerivative)) + windowSize
+    return secondDerivative.index(min(secondDerivative)) + windowSize
 
 
 
@@ -151,5 +179,5 @@ def within_clust_sim(similarity_matrix, catalog, clusters):
         
 def concensus(similarity_matrix, catalog,clusters):
     k1= 1
-    k2 = -.30
+    k2 = -.50
     return k1*within_clust_sim(similarity_matrix, catalog,clusters) + k2*between_clust_sim(similarity_matrix, catalog,clusters)

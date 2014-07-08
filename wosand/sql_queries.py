@@ -1,3 +1,82 @@
+PAPER_ALL_INFO_ALL = """
+SELECT 
+v.*,
+GROUP_CONCAT( DISTINCT COALESCE(ar.first_author, ' ') ORDER BY ar.first_author SEPARATOR ' ') AS ref_authors,
+GROUP_CONCAT( DISTINCT COALESCE(ar.journal, ' ') ORDER BY ar.journal SEPARATOR ' ') AS ref_journals,
+GROUP_CONCAT( DISTINCT COALESCE(ac.country, ' ') ORDER BY ac.country SEPARATOR ' ') AS country
+FROM
+(
+    SELECT 
+        t.author_id,
+        t.author_name,
+        t.article_id,
+        t.article_title, 
+        t.year,
+        t.authors,
+        t.subjects, 
+        t.keywords,
+        t.journal,
+        t.institution
+    FROM (
+        SELECT
+            aad.authorId as author_id,
+            aad.author as author_name,
+            a.id as article_id,
+            a.title as article_title,
+            a.year as year,
+            a.abbr as journal, #a.journal as journal
+            a.authors as authors,
+            GROUP_CONCAT( DISTINCT COALESCE(asu.subject, ' ') ORDER BY asu.subject SEPARATOR ' ') AS subjects,
+            GROUP_CONCAT( DISTINCT COALESCE(ak.keyword, ' ') ORDER BY ak.keyword SEPARATOR ' ') AS keywords,
+            GROUP_CONCAT( DISTINCT COALESCE(p.institution, ' ') ORDER BY p.institution SEPARATOR ' ') AS institution
+        FROM
+            articles a 
+            JOIN articles_authors_disambiguated aad ON aad.id = a.id 
+            LEFT JOIN articles_subjects asu ON asu.id = a.id
+            LEFT JOIN articles_keywords ak ON ak.id = a.id
+            LEFT JOIN pub_inst p ON p.pub_id = a.id
+        WHERE aad.authorId > 0
+        GROUP BY article_id, author_id
+        ORDER BY article_id
+    ) t
+    ORDER BY author_id
+) v
+LEFT JOIN articles_refs ar ON ar.id = v.article_id
+LEFT JOIN articles_countries ac ON ac.id = v.article_id
+GROUP BY v.article_id, v.author_id 
+ORDER BY v.author_id
+"""
+
+JARO_WINKLER_MASK_ALL = """
+SELECT 
+    aad1.id, aad1.authorId, aad2.id, aad2.authorId, 1 
+FROM 
+    `articles_authors_disambiguated` as aad1, `articles_authors_disambiguated` as aad2 
+WHERE
+    
+    AND jaro_winkler_similarity(SUBSTRING_INDEX(SUBSTRING_INDEX(aad1.author, ' ', 2), ' ', -1), SUBSTRING_INDEX(SUBSTRING_INDEX(aad2.author, ' ', 2), ' ', -1)) > 0
+    AND aad1.authorId>0 and aad2.authorId>0
+ORDER BY
+    aad1.authorId
+"""
+
+FOCUS_NAMES = """
+SELECT 
+     LOWER(TRIM(aad.author)) as author, aad.id
+FROM 
+    `articles_authors_disambiguated` as aad
+WHERE
+    aad.authorId>0 
+"""
+
+AUTHOR_ORDERING_ALL = """
+SELECT aad.id
+FROM `articles_authors_disambiguated`aad 
+WHERE aad.authorId>0
+GROUP BY aad.id, aad.d
+ORDER BY aad.authorId
+"""
+
 PAPER_ALL_INFO = """
 SELECT 
 v.*,

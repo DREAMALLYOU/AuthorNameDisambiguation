@@ -16,6 +16,7 @@ from nltk import stem
 
 from connection import Connection
 from sql_queries_production import PAPER_ALL_INFO
+from sql_queries import PAPER_ALL_INFO_ALL
 from graph_queries_production import COAUTHORSHIP_GRAPH_MATRIX
 from graph_queries_production import REFERENCES_GRAPH_MATRIX
 from graph_queries_production import SUBJECTS_GRAPH_MATRIX
@@ -52,9 +53,11 @@ DEFAULT_VALUE = 0.5
 
 #return the cosine similarity matrix (institutions) among papers and the library object
 #that keeps track of the association: matrix line --> paper/author information 
-def get_library(focus_name, debug):
+def get_library(focus_name, debug,subset):
     #initialization
     all_info_query = PAPER_ALL_INFO.format(focus_name)
+    if subset:
+        all_info_query = PAPER_ALL_INFO_ALL
     conn = Connection()
     paper_tracker = 0
     result_row_count = 0
@@ -158,6 +161,8 @@ def get_string_distance_matrix(library, catalog, field, distance_type):
             mat_result[i][j] = DEFAULT_VALUE
     #subtract matrices from 1 to get similarity and not difference
     m = 1 - mat_result
+
+    
     return m
 
 
@@ -198,6 +203,8 @@ def get_cosine_distance_matrix(library, catalog, field, distance_type, mask_matr
 
     
     #this technique requires to set diagonal to 1s
+    mat_result[mat_result<0] = 0
+    mat_result[mat_result>1] = 1
     return mat_result
 
 
